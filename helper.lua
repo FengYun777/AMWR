@@ -1155,35 +1155,33 @@ callbacks.Register("Draw", "helper12_draw", function()
         end
 
         if any_on_spot or any_path then
-            local aim_item = nil
+            local fov_item = nil
             local best_ang = math.huge
             for _, item in ipairs(items) do
                 if item.on_spot or item.is_path then
-                    if item.is_active then
-                        aim_item = item
-                        break
-                    end
                     local in_fov = is_view_in_point_fov(view, item.point)
-                    if in_fov then
+                    if item.is_active then
+                        fov_item = item
+                        best_ang = -1
+                    elseif best_ang >= 0 and in_fov then
                         local dp, dy = angle_delta_to_point(view, item.point)
                         local ad = math.abs(dp) + math.abs(dy)
                         if ad < best_ang then
                             best_ang = ad
-                            aim_item = item
+                            fov_item = item
                         end
-                    elseif aim_item == nil then
-                        aim_item = item
+                    elseif fov_item == nil then
+                        fov_item = item
                     end
+                    local spot_alpha = math.max(item.alpha, 220)
+                    local ready = in_fov or item.is_path
+                    local playing = item.is_active and is_execute_down() and state ~= "aim"
+                    draw_aim_target(player, item.point, playing, ready, spot_alpha, view)
                 end
             end
-            if aim_item then
-                local point = aim_item.point
-                local spot_alpha = math.max(aim_item.alpha, 220)
-                local in_fov = is_view_in_point_fov(view, point)
-                local ready = in_fov or aim_item.is_path
-                draw_fov_ring(point, ready, spot_alpha)
-                local playing = aim_item.is_active and is_execute_down() and state ~= "aim"
-                draw_aim_target(player, point, playing, ready, spot_alpha, view)
+            if fov_item then
+                local ready = is_view_in_point_fov(view, fov_item.point) or fov_item.is_path
+                draw_fov_ring(fov_item.point, ready, math.max(fov_item.alpha, 220))
             end
         end
 

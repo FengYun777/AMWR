@@ -1,15 +1,32 @@
 local DATA_FILE = "helper_data.txt"
 local DEFAULT_DATA = "return {\n}\n"
 
--- helper 1.2
+-- helper 1.3
 -- lineups saved in helper_data.txt so they survive reloads
 local MOVE_SCALE = 1
 local IN_ATTACK, IN_JUMP, IN_DUCK = 1, 2, 4
 local IN_FORWARD, IN_BACK = 8, 16
+local IN_USE = 32
 local IN_MOVELEFT, IN_MOVERIGHT = 512, 1024
 local IN_ATTACK2 = 2048
+local IN_SPEED = 65536
 
-local window = gui.Window("helper12_window", "helper 1.2", 120, 80, 612, 680)
+local BTN_ORDER = {
+    "in_attack", "in_jump", "in_duck", "in_forward", "in_moveleft",
+    "in_moveright", "in_back", "in_use", "in_attack2", "in_speed"
+}
+local BTN_CHARS = {
+    in_attack = "A", in_jump = "J", in_duck = "D",
+    in_forward = "F", in_moveleft = "L", in_moveright = "R",
+    in_back = "B", in_use = "U", in_attack2 = "Z", in_speed = "S"
+}
+local BTN_CHARS_INV = {
+    A = "in_attack", J = "in_jump", D = "in_duck",
+    F = "in_forward", L = "in_moveleft", R = "in_moveright",
+    B = "in_back", U = "in_use", Z = "in_attack2", S = "in_speed"
+}
+
+local window = gui.Window("helper13_window", "helper 1.3", 120, 80, 612, 680)
 local col_w = 288
 local gap = 24
 local left_x = 8
@@ -18,45 +35,48 @@ local right_x = left_x + col_w + gap
 local playback_h = 315
 local visuals_h = 296
 local record_h = 300
-local manage_h = 120
+local manage_h = 200
 
 local settings = gui.Groupbox(window, "Playback", left_x, 8, col_w, playback_h)
-local enabled = gui.Checkbox(settings, "helper12_enabled", "Enabled", true)
-local execute_key = gui.Keybox(settings, "helper12_execute_key", "Execute key (default LMB)", 1)
-local smooth = gui.Slider(settings, "helper12_smooth", "Aim smoothness", 8, 1, 50)
-local position_radius = gui.Slider(settings, "helper12_position_radius", "Spot radius", 8, 2, 40)
-local show_distance = gui.Slider(settings, "helper12_show_distance", "Show distance", 1200, 100, 5000)
-local auto_path = gui.Checkbox(settings, "helper12_auto_path", "Auto walk to nearest spot", true)
-local path_range = gui.Slider(settings, "helper12_path_range", "Auto path range", 50, 50, 1500)
-local path_center = gui.Slider(settings, "helper12_path_center", "Path center", 0.1, 0.1, 4)
-local path_settle = gui.Slider(settings, "helper12_path_settle", "Path settle delay", 1.0, 0.1, 2.0)
+local enabled = gui.Checkbox(settings, "helper13_enabled", "Enabled", true)
+local execute_key = gui.Keybox(settings, "helper13_execute_key", "Execute key (default LMB)", 1)
+local smooth = gui.Slider(settings, "helper13_smooth", "Aim smoothness", 8, 1, 50)
+local position_radius = gui.Slider(settings, "helper13_position_radius", "Spot radius", 8, 2, 40)
+local show_distance = gui.Slider(settings, "helper13_show_distance", "Show distance", 1200, 100, 5000)
+local auto_path = gui.Checkbox(settings, "helper13_auto_path", "Auto walk to nearest spot", true)
+local path_range = gui.Slider(settings, "helper13_path_range", "Auto path range", 50, 50, 1500)
+local path_center = gui.Slider(settings, "helper13_path_center", "Path center", 0.1, 0.1, 4)
+local path_settle = gui.Slider(settings, "helper13_path_settle", "Path settle delay", 1.0, 0.1, 2.0)
 
 local visuals = gui.Groupbox(window, "Visuals", right_x, 8, col_w, visuals_h)
-local show_points = gui.Checkbox(visuals, "helper12_show_points", "Show world labels", true)
-local show_spot_ring = gui.Checkbox(visuals, "helper12_show_spot_ring", "Show spot ring", true)
-local show_fov = gui.Checkbox(visuals, "helper12_show_fov", "Show FOV ring", false)
-local show_status = gui.Checkbox(visuals, "helper12_show_status", "Show playback state", false)
-local bg_color = gui.ColorPicker(visuals, "helper12_bg", "Label background", 18, 20, 28, 195)
-local glow_color = gui.ColorPicker(visuals, "helper12_glow", "Label glow", 255, 120, 70, 200)
-local red = gui.ColorPicker(visuals, "helper12_red", "Aim dot (idle)", 245, 70, 70, 255)
-local green = gui.ColorPicker(visuals, "helper12_green", "Aim dot (ready/playing)", 80, 230, 120, 255)
+local show_points = gui.Checkbox(visuals, "helper13_show_points", "Show world labels", true)
+local show_spot_ring = gui.Checkbox(visuals, "helper13_show_spot_ring", "Show spot ring", true)
+local show_fov = gui.Checkbox(visuals, "helper13_show_fov", "Show FOV ring", false)
+local show_status = gui.Checkbox(visuals, "helper13_show_status", "Show playback state", false)
+local bg_color = gui.ColorPicker(visuals, "helper13_bg", "Label background", 18, 20, 28, 195)
+local glow_color = gui.ColorPicker(visuals, "helper13_glow", "Label glow", 255, 120, 70, 200)
+local red = gui.ColorPicker(visuals, "helper13_red", "Aim dot (idle)", 245, 70, 70, 255)
+local green = gui.ColorPicker(visuals, "helper13_green", "Aim dot (ready/playing)", 80, 230, 120, 255)
 
 local record_y = 8 + playback_h + gap
 local record_box = gui.Groupbox(window, "Record", left_x, record_y, col_w, record_h)
-local rec_name = gui.Editbox(record_box, "helper12_rec_name", "Spot name")
-local rec_jump = gui.Checkbox(record_box, "helper12_rec_jump", "Jump throw", false)
-local rec_walk = gui.Checkbox(record_box, "helper12_rec_walk", "Walk throw", true)
-local rec_walk_ticks = gui.Slider(record_box, "helper12_rec_walk_ticks", "Walk ticks", 30, 1, 250)
-local rec_walk_dir = gui.Combobox(record_box, "helper12_rec_walk_dir", "Walk dir", "Forward", "Back", "Left", "Right")
-local rec_crouch = gui.Checkbox(record_box, "helper12_rec_crouch", "Crouch", false)
-local rec_throw = gui.Combobox(record_box, "helper12_rec_throw", "Throw mode", "Left click", "Both buttons", "Right click")
-local rec_fov = gui.Slider(record_box, "helper12_rec_fov", "FOV range (deg)", 5, 1, 45)
+local rec_name = gui.Editbox(record_box, "helper13_rec_name", "Spot name")
+local rec_jump = gui.Checkbox(record_box, "helper13_rec_jump", "Jump throw", false)
+local rec_walk = gui.Checkbox(record_box, "helper13_rec_walk", "Walk throw", true)
+local rec_walk_ticks = gui.Slider(record_box, "helper13_rec_walk_ticks", "Walk ticks", 30, 1, 250)
+local rec_walk_dir = gui.Combobox(record_box, "helper13_rec_walk_dir", "Walk dir", "Forward", "Back", "Left", "Right")
+local rec_crouch = gui.Checkbox(record_box, "helper13_rec_crouch", "Crouch", false)
+local rec_throw = gui.Combobox(record_box, "helper13_rec_throw", "Throw mode", "Left click", "Both buttons", "Right click")
+local rec_fov = gui.Slider(record_box, "helper13_rec_fov", "FOV range (deg)", 5, 1, 45)
 
 local manage_y = 8 + visuals_h + gap
 local manage_box = gui.Groupbox(window, "Manage", right_x, manage_y, col_w, manage_h)
-local rec_save = gui.Checkbox(manage_box, "helper12_rec_save", "Save current spot", false)
-local del_save = gui.Checkbox(manage_box, "helper12_del_save", "Delete aimed spot", false)
+local rec_recording = gui.Checkbox(manage_box, "helper13_rec_recording", "Recording (macro)", false)
+local rec_save_macro = gui.Checkbox(manage_box, "helper13_rec_save_macro", "Save recording (macro)", false)
+local rec_save = gui.Checkbox(manage_box, "helper13_rec_save", "Save current spot", false)
+local del_save = gui.Checkbox(manage_box, "helper13_del_save", "Delete aimed spot", false)
 local rec_save_prev = false
+local rec_save_macro_prev = false
 local del_save_prev = false
 
 local weapon_names = {
@@ -146,12 +166,12 @@ local function load_lineups()
     end
     local chunk, err = load(raw)
     if chunk == nil then
-        print("[helper 1.2] failed to parse helper_data.txt: " .. tostring(err))
+        print("[helper 1.3] failed to parse helper_data.txt: " .. tostring(err))
         return {}
     end
     local success, data = pcall(chunk)
     if not success or type(data) ~= "table" then
-        print("[helper 1.2] helper_data.txt must return a table")
+        print("[helper 1.3] helper_data.txt must return a table")
         return {}
     end
     return data
@@ -174,6 +194,14 @@ local path_settle_ticks = 0
 local path_stuck_ticks = 0
 local path_last_nd = 1e9
 
+local rec_on_prev = false
+local rec_waiting = false
+local rec_active = false
+local rec_buf = {}
+local rec_meta = nil
+local rec_ready_frames = nil
+local rec_ready_meta = nil
+
 local function valid_point(point)
     if type(point) ~= "table" then return false end
     local p, a = point.pos, point.ang
@@ -189,8 +217,200 @@ local function reset_playback()
     playback_tick = 0
 end
 
+local function point_has_macro(point)
+    return type(point) == "table"
+        and type(point.movement) == "table"
+        and type(point.movement.frames) == "table"
+end
+
+local function calc_move(btn1, btn2)
+    if btn1 then return MOVE_SCALE end
+    if btn2 then return -MOVE_SCALE end
+    return 0
+end
+
+local function parse_buttons_str(str)
+    local down, up = {}, {}
+    if type(str) ~= "string" then return down, up end
+    for i = 1, #str do
+        local c = str:sub(i, i)
+        local lower = c:lower()
+        if c == lower then
+            table.insert(up, BTN_CHARS_INV[c:upper()])
+        else
+            table.insert(down, BTN_CHARS_INV[c])
+        end
+    end
+    return down, up
+end
+
+local function compress_usercmds(usercmds)
+    if type(usercmds) ~= "table" or #usercmds == 0 then return {} end
+    local frames = {}
+    local current = {
+        viewangles = { pitch = usercmds[1].pitch, yaw = usercmds[1].yaw },
+        buttons = {}
+    }
+    for _, key in ipairs(BTN_ORDER) do
+        current.buttons[key] = false
+    end
+    local empty_count = 0
+    for _, cmd in ipairs(usercmds) do
+        local buttons = ""
+        for _, btn in ipairs(BTN_ORDER) do
+            local value_prev = current.buttons[btn]
+            if cmd[btn] and not value_prev then
+                buttons = buttons .. BTN_CHARS[btn]
+            elseif not cmd[btn] and value_prev then
+                buttons = buttons .. string.lower(BTN_CHARS[btn])
+            end
+            current.buttons[btn] = cmd[btn] and true or false
+        end
+        local frame = {
+            cmd.pitch - current.viewangles.pitch,
+            cmd.yaw - current.viewangles.yaw,
+            buttons,
+            cmd.forwardmove,
+            cmd.sidemove
+        }
+        current.viewangles = { pitch = cmd.pitch, yaw = cmd.yaw }
+        if frame[#frame] == calc_move(cmd.in_moveright, cmd.in_moveleft) then
+            frame[#frame] = nil
+            if frame[#frame] == calc_move(cmd.in_forward, cmd.in_back) then
+                frame[#frame] = nil
+                if frame[#frame] == "" then
+                    frame[#frame] = nil
+                    if frame[#frame] == 0 then
+                        frame[#frame] = nil
+                        if frame[#frame] == 0 then
+                            frame[#frame] = nil
+                        end
+                    end
+                end
+            end
+        end
+        if #frame > 0 then
+            if empty_count > 0 then
+                table.insert(frames, empty_count)
+                empty_count = 0
+            end
+            table.insert(frames, frame)
+        else
+            empty_count = empty_count + 1
+        end
+    end
+    if empty_count > 0 then
+        table.insert(frames, empty_count)
+    end
+    return frames
+end
+
+local function decompress_frames(raw_frames, base_ang)
+    if type(raw_frames) ~= "table" then return nil end
+    local frames = {}
+    for i, frame in ipairs(raw_frames) do
+        if type(frame) == "number" then
+            if frame <= 0 then return nil end
+            for _ = 1, frame do
+                table.insert(frames, {})
+            end
+        elseif type(frame) == "table" then
+            table.insert(frames, frame)
+        else
+            return nil
+        end
+    end
+    local current = {
+        viewangles = {
+            pitch = (base_ang and base_ang.pitch) or 0,
+            yaw = (base_ang and base_ang.yaw) or 0
+        },
+        buttons = {},
+        forwardmove = 0,
+        sidemove = 0
+    }
+    for _, key in ipairs(BTN_ORDER) do
+        current.buttons[key] = false
+    end
+    local out = {}
+    for i, value in ipairs(frames) do
+        local pitch = value[1]
+        local yaw = value[2]
+        local buttons = value[3]
+        local forwardmove = value[4]
+        local sidemove = value[5]
+        current.viewangles.pitch = current.viewangles.pitch + (pitch or 0)
+        current.viewangles.yaw = current.viewangles.yaw + (yaw or 0)
+        if type(buttons) == "string" then
+            local buttons_down, buttons_up = parse_buttons_str(buttons)
+            for _, btn in ipairs(buttons_down) do
+                if btn then current.buttons[btn] = true end
+            end
+            for _, btn in ipairs(buttons_up) do
+                if btn then current.buttons[btn] = false end
+            end
+        end
+        if type(forwardmove) == "number" then
+            current.forwardmove = forwardmove
+        else
+            current.forwardmove = calc_move(current.buttons.in_forward, current.buttons.in_back)
+        end
+        if type(sidemove) == "number" then
+            current.sidemove = sidemove
+        else
+            current.sidemove = calc_move(current.buttons.in_moveright, current.buttons.in_moveleft)
+        end
+        local row = {
+            pitch = current.viewangles.pitch,
+            yaw = current.viewangles.yaw,
+            forwardmove = current.forwardmove,
+            sidemove = current.sidemove
+        }
+        for btn, pressed in pairs(current.buttons) do
+            row[btn] = pressed
+        end
+        out[i] = row
+    end
+    return out
+end
+
+local function ensure_macro_cmds(point)
+    if point._macro_cmds then return point._macro_cmds end
+    local ok, cmds = pcall(decompress_frames, point.movement.frames, point.ang)
+    if not ok or type(cmds) ~= "table" or #cmds == 0 then return nil end
+    point._macro_cmds = cmds
+    return cmds
+end
+
 local function escape_lua_string(value)
     return tostring(value):gsub("\\", "\\\\"):gsub("\r", "\\r"):gsub("\n", "\\n"):gsub("\"", "\\\"")
+end
+
+local function serialize_frames(frames)
+    local parts = {}
+    for i, f in ipairs(frames) do
+        if type(f) == "number" then
+            parts[i] = tostring(math.floor(f + 0.5))
+        else
+            local cells = {}
+            for j = 1, #f do
+                local x = f[j]
+                if type(x) == "string" then
+                    cells[j] = "\"" .. escape_lua_string(x) .. "\""
+                elseif type(x) == "number" then
+                    if x == math.floor(x) then
+                        cells[j] = string.format("%d", x)
+                    else
+                        cells[j] = string.format("%.4f", x)
+                    end
+                else
+                    cells[j] = "0"
+                end
+            end
+            parts[i] = "{" .. table.concat(cells, ", ") .. "}"
+        end
+    end
+    return "{ " .. table.concat(parts, ", ") .. " }"
 end
 
 local function read_data_file()
@@ -203,7 +423,7 @@ local function write_data_file(text)
     pcall(function() file.Write(DATA_FILE, text) end)
 end
 
-local function build_point_entry(ctx, name)
+local function build_manual_entry(ctx, name)
     return "        {\n" ..
         "            name   = \"" .. escape_lua_string(name) .. "\",\n" ..
         "            pos    = {x=" .. string.format("%.1f", ctx.pos.x) ..
@@ -219,6 +439,20 @@ local function build_point_entry(ctx, name)
         "            throw_mode = " .. tostring(rec_throw:GetValue()) .. ",\n" ..
         "            weapon = \"" .. escape_lua_string(ctx.weapon) .. "\",\n" ..
         "            range  = " .. tostring(math.floor(rec_fov:GetValue())) .. ",\n" ..
+        "        },\n"
+end
+
+local function build_macro_entry(ctx, name, frames)
+    return "        {\n" ..
+        "            name   = \"" .. escape_lua_string(name) .. "\",\n" ..
+        "            pos    = {x=" .. string.format("%.1f", ctx.pos.x) ..
+        ", y=" .. string.format("%.1f", ctx.pos.y) ..
+        ",  z=" .. string.format("%.1f", ctx.pos.z) .. "},\n" ..
+        "            ang    = {pitch=" .. string.format("%.2f", ctx.ang.pitch) ..
+        ", yaw=" .. string.format("%.2f", ctx.ang.yaw) .. "},\n" ..
+        "            weapon = \"" .. escape_lua_string(ctx.weapon) .. "\",\n" ..
+        "            range  = " .. tostring(math.floor(rec_fov:GetValue())) .. ",\n" ..
+        "            movement = { frames = " .. serialize_frames(frames) .. " },\n" ..
         "        },\n"
 end
 
@@ -299,7 +533,109 @@ local function reload_lineups()
     label_alphas = {}
 end
 
-local function get_record_context()
+local function player_speed_2d(player)
+    local vx, vy = 0, 0
+    pcall(function()
+        if player.GetPropVector then
+            local v = player:GetPropVector("m_vecAbsVelocity")
+            if v then vx = v.x or 0; vy = v.y or 0 end
+        elseif player.GetFieldVector then
+            local v = player:GetFieldVector("m_vecAbsVelocity")
+            if v then vx = v.x or 0; vy = v.y or 0 end
+        end
+    end)
+    return math.sqrt(vx * vx + vy * vy)
+end
+
+local function flag_down(buttons, flag)
+    return bit.band(buttons, flag) ~= 0
+end
+
+local function capture_cmd_frame(cmd)
+    local buttons = math.floor(cmd:GetButtons() or 0)
+    local view = nil
+    pcall(function() view = cmd:GetViewAngles() end)
+    if view == nil then view = engine.GetViewAngles() end
+    local fwd, side = 0, 0
+    pcall(function() fwd = cmd:GetForwardMove() or 0 end)
+    pcall(function() side = cmd:GetSideMove() or 0 end)
+    return {
+        pitch = view.pitch,
+        yaw = view.yaw,
+        forwardmove = fwd,
+        sidemove = side,
+        in_attack = flag_down(buttons, IN_ATTACK),
+        in_attack2 = flag_down(buttons, IN_ATTACK2),
+        in_jump = flag_down(buttons, IN_JUMP),
+        in_duck = flag_down(buttons, IN_DUCK),
+        in_forward = flag_down(buttons, IN_FORWARD),
+        in_back = flag_down(buttons, IN_BACK),
+        in_moveleft = flag_down(buttons, IN_MOVELEFT),
+        in_moveright = flag_down(buttons, IN_MOVERIGHT),
+        in_use = flag_down(buttons, IN_USE),
+        in_speed = flag_down(buttons, IN_SPEED)
+    }
+end
+
+local function commit_recording_buffer()
+    if #rec_buf > 0 and rec_meta then
+        local ok, frames = pcall(compress_usercmds, rec_buf)
+        if ok and type(frames) == "table" and #frames > 0 then
+            rec_ready_frames = frames
+            rec_ready_meta = rec_meta
+            print(string.format("[helper 1.3] recorded %d ticks (%d compressed)", #rec_buf, #frames))
+        else
+            print("[helper 1.3] recording failed to compress")
+        end
+    else
+        print("[helper 1.3] recording cancelled (empty)")
+    end
+    rec_active = false
+    rec_waiting = false
+    rec_buf = {}
+    rec_meta = nil
+end
+
+local function update_recording(cmd, player)
+    local on = false
+    pcall(function() on = rec_recording:GetValue() end)
+    if on and not rec_on_prev then
+        rec_waiting = true
+        rec_active = false
+        rec_buf = {}
+        rec_meta = nil
+        print("[helper 1.3] recording armed: stand still with a grenade")
+    elseif (not on) and rec_on_prev then
+        commit_recording_buffer()
+    end
+    rec_on_prev = on
+    if not on or player == nil then return end
+
+    if rec_waiting and not rec_active then
+        if player_speed_2d(player) >= 2 then return end
+        local weapon = get_grenade(player)
+        if weapon == nil then return end
+        local view = engine.GetViewAngles()
+        local origin = player:GetAbsOrigin()
+        rec_meta = {
+            pos = { x = origin.x, y = origin.y, z = origin.z },
+            ang = { pitch = view.pitch, yaw = view.yaw },
+            weapon = weapon,
+            map = map_name()
+        }
+        rec_buf = {}
+        rec_active = true
+        rec_waiting = false
+        table.insert(rec_buf, capture_cmd_frame(cmd))
+        print("[helper 1.3] recording started")
+        return
+    end
+
+    if not rec_active then return end
+    table.insert(rec_buf, capture_cmd_frame(cmd))
+end
+
+local function get_live_record_context()
     local player = get_player()
     if player == nil then return nil end
     local weapon = get_grenade(player)
@@ -308,8 +644,20 @@ local function get_record_context()
         pos = player:GetAbsOrigin(),
         ang = engine.GetViewAngles(),
         map = map_name(),
-        weapon = weapon,
+        weapon = weapon
     }
+end
+
+local function get_macro_record_context()
+    if rec_ready_meta then
+        return {
+            pos = rec_ready_meta.pos,
+            ang = rec_ready_meta.ang,
+            map = rec_ready_meta.map,
+            weapon = rec_ready_meta.weapon
+        }
+    end
+    return nil
 end
 
 local function frame_time()
@@ -533,8 +881,35 @@ local function write_approach(cmd, player, point, snap)
     return false
 end
 
+local function write_macro(cmd)
+    if active == nil then return end
+    local cmds = active._macro_cmds
+    if type(cmds) ~= "table" then return end
+    local frame = cmds[playback_tick]
+    if frame == nil then return end
+    apply_view(cmd, frame.pitch, frame.yaw)
+    cmd:SetForwardMove(frame.forwardmove or 0)
+    cmd:SetSideMove(frame.sidemove or 0)
+    cmd:SetUpMove(0)
+    local buttons = clear_controlled_buttons(math.floor(cmd:GetButtons()))
+    buttons = bit.band(buttons, bit.bnot(IN_USE))
+    buttons = bit.band(buttons, bit.bnot(IN_SPEED))
+    if frame.in_attack then buttons = bit.bor(buttons, IN_ATTACK) end
+    if frame.in_attack2 then buttons = bit.bor(buttons, IN_ATTACK2) end
+    if frame.in_jump then buttons = bit.bor(buttons, IN_JUMP) end
+    if frame.in_duck then buttons = bit.bor(buttons, IN_DUCK) end
+    if frame.in_forward then buttons = bit.bor(buttons, IN_FORWARD) end
+    if frame.in_back then buttons = bit.bor(buttons, IN_BACK) end
+    if frame.in_moveleft then buttons = bit.bor(buttons, IN_MOVELEFT) end
+    if frame.in_moveright then buttons = bit.bor(buttons, IN_MOVERIGHT) end
+    if frame.in_use then buttons = bit.bor(buttons, IN_USE) end
+    if frame.in_speed then buttons = bit.bor(buttons, IN_SPEED) end
+    cmd:SetButtons(buttons)
+end
+
 local function write_current_command(cmd)
     if active == nil then return end
+    if state == "macro" then write_macro(cmd) end
     if state == "aim" then write_aim(cmd) end
     if state == "charge" then write_charge(cmd, active) end
     if state == "walk" then write_walk(cmd, active) end
@@ -550,6 +925,29 @@ local function start_aim(cmd, point)
     local view = engine.GetViewAngles()
     aim_pitch = view.pitch
     aim_yaw = normalize_yaw(view.yaw)
+    if point_has_macro(point) then
+        ensure_macro_cmds(point)
+    end
+end
+
+local function start_macro(point)
+    local cmds = ensure_macro_cmds(point)
+    if cmds == nil then return false end
+    active = point
+    state = "macro"
+    stable_ticks = 0
+    playback_tick = 0
+    return true
+end
+
+local function aim_target_angles(point)
+    if point_has_macro(point) then
+        local cmds = point._macro_cmds or ensure_macro_cmds(point)
+        if type(cmds) == "table" and cmds[1] then
+            return cmds[1].pitch, cmds[1].yaw
+        end
+    end
+    return point.ang.pitch, point.ang.yaw
 end
 
 local function update_playback(cmd, player, map, weapon)
@@ -671,9 +1069,20 @@ local function update_playback(cmd, player, map, weapon)
         return
     end
 
+    if state == "macro" then
+        playback_tick = playback_tick + 1
+        local cmds = active._macro_cmds
+        if type(cmds) ~= "table" or playback_tick > #cmds then
+            reset_playback()
+            await_key_release = true
+        end
+        return
+    end
+
     if state == "aim" then
-        local target_pitch = math.max(-89, math.min(89, active.ang.pitch))
-        local target_yaw = normalize_yaw(active.ang.yaw)
+        local tp, ty = aim_target_angles(active)
+        local target_pitch = math.max(-89, math.min(89, tp))
+        local target_yaw = normalize_yaw(ty)
         local pitch_delta = target_pitch - aim_pitch
         local yaw_delta = normalize_yaw(target_yaw - aim_yaw)
         local total = math.abs(pitch_delta) + math.abs(yaw_delta)
@@ -705,6 +1114,9 @@ local function update_playback(cmd, player, map, weapon)
             if stable_ticks >= 4 then
                 aim_pitch = target_pitch
                 aim_yaw = target_yaw
+                if point_has_macro(active) then
+                    if start_macro(active) then return end
+                end
                 state = "charge"
                 playback_tick = 0
             end
@@ -767,7 +1179,7 @@ local function block_early_pin(cmd)
     if player == nil then return end
     local weapon = get_grenade(player)
     if weapon == nil then return end
-    if state == "charge" or state == "walk" or state == "release" or state == "jump" then
+    if state == "charge" or state == "walk" or state == "release" or state == "jump" or state == "macro" then
         return
     end
     if not should_block_early_pin(player, weapon) then return end
@@ -777,9 +1189,11 @@ local function block_early_pin(cmd)
     cmd:SetButtons(buttons)
 end
 
-callbacks.Register("CreateMove", "helper12_createmove", function(cmd)
-    if not enabled:GetValue() then reset_playback(); return end
+callbacks.Register("CreateMove", "helper13_createmove", function(cmd)
     local player = get_player()
+    update_recording(cmd, player)
+    if rec_active or rec_waiting then return end
+    if not enabled:GetValue() then reset_playback(); return end
     if player == nil then reset_playback(); return end
     local weapon = get_grenade(player)
     if weapon == nil then
@@ -792,7 +1206,8 @@ callbacks.Register("CreateMove", "helper12_createmove", function(cmd)
     block_early_pin(cmd)
 end)
 
-callbacks.Register("PreMove", "helper12_premove", function(cmd)
+callbacks.Register("PreMove", "helper13_premove", function(cmd)
+    if rec_active or rec_waiting then return end
     if not enabled:GetValue() then return end
     local player = get_player()
     if player == nil or get_grenade(player) == nil then return end
@@ -801,7 +1216,8 @@ callbacks.Register("PreMove", "helper12_premove", function(cmd)
     block_early_pin(cmd)
 end)
 
-callbacks.Register("PostMove", "helper12_postmove", function(cmd)
+callbacks.Register("PostMove", "helper13_postmove", function(cmd)
+    if rec_active or rec_waiting then return end
     if not enabled:GetValue() then return end
     local player = get_player()
     if player == nil or get_grenade(player) == nil then return end
@@ -962,24 +1378,68 @@ local function draw_aim_target(player, point, is_playing, in_fov, alpha, view)
     draw.FilledCircle(x, y, 2)
 end
 
-local function save_current_spot()
-    local ctx = get_record_context()
+local function spot_name()
+    local name = rec_name:GetString()
+    if name == nil or name == "" then return "New spot" end
+    return name
+end
+
+local function save_manual_spot()
+    local ctx = get_live_record_context()
     if ctx == nil then
-        print("[helper 1.2] record failed: hold a grenade before saving")
+        print("[helper 1.3] save failed: hold a grenade before saving")
+        rec_save:SetValue(false)
+        rec_save_prev = false
         return
     end
-    local name = rec_name:GetString()
-    if name == nil or name == "" then name = "New spot" end
-    local entry = build_point_entry(ctx, name)
+    local name = spot_name()
+    local entry = build_manual_entry(ctx, name)
     local text = insert_point_entry(read_data_file(), ctx.map, entry)
     write_data_file(text)
     reload_lineups()
     rec_save:SetValue(false)
     rec_save_prev = false
-    print(string.format("[helper 1.2] saved spot \"%s\" on %s", name, ctx.map))
+    print(string.format("[helper 1.3] saved spot \"%s\" on %s", name, ctx.map))
     if rec_walk:GetValue() then
-        print(string.format("[helper 1.2] walk throw: ticks=%d dir=%d", math.floor(rec_walk_ticks:GetValue()), rec_walk_dir:GetValue()))
+        print(string.format("[helper 1.3] walk throw: ticks=%d dir=%d", math.floor(rec_walk_ticks:GetValue()), rec_walk_dir:GetValue()))
     end
+end
+
+local function save_macro_spot()
+    if rec_active or rec_waiting then
+        commit_recording_buffer()
+        rec_on_prev = false
+        pcall(function() rec_recording:SetValue(false) end)
+    end
+    if type(rec_ready_frames) ~= "table" or #rec_ready_frames == 0 or rec_ready_meta == nil then
+        print("[helper 1.3] save recording failed: Recording on → throw → off first")
+        rec_save_macro:SetValue(false)
+        rec_save_macro_prev = false
+        return
+    end
+    local ctx = get_macro_record_context()
+    if ctx == nil then
+        print("[helper 1.3] save recording failed: missing recording data")
+        rec_save_macro:SetValue(false)
+        rec_save_macro_prev = false
+        return
+    end
+    local name = spot_name()
+    local ok, entry = pcall(build_macro_entry, ctx, name, rec_ready_frames)
+    if not ok or type(entry) ~= "string" then
+        print("[helper 1.3] save recording failed: " .. tostring(entry))
+        rec_save_macro:SetValue(false)
+        rec_save_macro_prev = false
+        return
+    end
+    local text = insert_point_entry(read_data_file(), ctx.map, entry)
+    write_data_file(text)
+    reload_lineups()
+    rec_save_macro:SetValue(false)
+    rec_save_macro_prev = false
+    print(string.format("[helper 1.3] saved recording \"%s\" on %s (%d frames)", name, ctx.map, #rec_ready_frames))
+    rec_ready_frames = nil
+    rec_ready_meta = nil
 end
 
 local function delete_nearest_spot()
@@ -987,13 +1447,13 @@ local function delete_nearest_spot()
     if player == nil then return end
     local weapon = get_grenade(player)
     if weapon == nil then
-        print("[helper 1.2] delete failed: hold a matching grenade first")
+        print("[helper 1.3] delete failed: hold a matching grenade first")
         return
     end
     local map = map_name()
     local list = lineups[map]
     if type(list) ~= "table" or #list == 0 then
-        print("[helper 1.2] delete failed: no spots on this map")
+        print("[helper 1.3] delete failed: no spots on this map")
         return
     end
     local origin = player:GetAbsOrigin()
@@ -1018,13 +1478,13 @@ local function delete_nearest_spot()
         end
     end
     if target == nil then
-        print("[helper 1.2] delete failed: stand within 8u and aim at spot (green)")
+        print("[helper 1.3] delete failed: stand within 8u and aim at spot (green)")
         return
     end
     local text = read_data_file()
     local entry_start, entry_end = find_entry_bounds(text, target)
     if entry_start == nil or entry_end == nil then
-        print("[helper 1.2] delete failed: could not locate spot in file")
+        print("[helper 1.3] delete failed: could not locate spot in file")
         return
     end
     write_data_file(text:sub(1, entry_start - 1) .. text:sub(entry_end))
@@ -1032,13 +1492,19 @@ local function delete_nearest_spot()
     reload_lineups()
     del_save:SetValue(false)
     del_save_prev = false
-    print(string.format("[helper 1.2] deleted spot \"%s\" (%.1fu)", target.name or "Lineup", target_d))
+    print(string.format("[helper 1.3] deleted spot \"%s\" (%.1fu)", target.name or "Lineup", target_d))
 end
 
 local function handle_record_toggle()
     local cur = rec_save:GetValue()
-    if cur and not rec_save_prev then save_current_spot() end
+    if cur and not rec_save_prev then save_manual_spot() end
     rec_save_prev = cur
+end
+
+local function handle_macro_save_toggle()
+    local cur = rec_save_macro:GetValue()
+    if cur and not rec_save_macro_prev then save_macro_spot() end
+    rec_save_macro_prev = cur
 end
 
 local function handle_delete_toggle()
@@ -1047,10 +1513,26 @@ local function handle_delete_toggle()
     del_save_prev = cur
 end
 
-callbacks.Register("Draw", "helper12_draw", function()
+callbacks.Register("Draw", "helper13_draw", function()
     window:SetActive(gui.Reference("Menu"):IsActive())
     handle_record_toggle()
+    handle_macro_save_toggle()
     handle_delete_toggle()
+
+    if rec_active or rec_waiting then
+        draw.Color(255, 200, 80, 255)
+        local msg = "Recording: stand still..."
+        if rec_active then
+            local ti = 1 / 64
+            pcall(function()
+                local t = globals.TickInterval and globals.TickInterval() or (1 / 64)
+                if type(t) == "number" and t > 0 then ti = t end
+            end)
+            msg = string.format("Recording %.2fs / %d ticks", #rec_buf * ti, #rec_buf)
+        end
+        draw.Text(12, 12, msg)
+    end
+
     if not enabled:GetValue() then return end
     local player = get_player()
     if player == nil then return end
@@ -1189,7 +1671,10 @@ callbacks.Register("Draw", "helper12_draw", function()
         if sx and sy and show_points:GetValue() then
             local heights, total_h = {}, 0
             for i, item in ipairs(items) do
-                local subtitle = string.format("%.0f u · %s%s", item.distance, weapon_label(item.point.weapon), item.point.walk and " · walk" or "")
+                local tag = ""
+                if point_has_macro(item.point) then tag = " · macro"
+                elseif item.point.walk then tag = " · walk" end
+                local subtitle = string.format("%.0f u · %s%s", item.distance, weapon_label(item.point.weapon), tag)
                 local _, h = measure_label(item.point.name or "Lineup", subtitle)
                 heights[i] = h
                 total_h = total_h + h + (i < #items and 5 or 0)
@@ -1200,7 +1685,10 @@ callbacks.Register("Draw", "helper12_draw", function()
                 local point = item.point
                 local item_r, item_g, item_b = rr, rg, rb
                 if item.is_active or item.is_path then item_r, item_g, item_b = gr, gg, gb end
-                local subtitle = string.format("%.0f u · %s%s", item.distance, weapon_label(point.weapon), point.walk and " · walk" or "")
+                local tag = ""
+                if point_has_macro(point) then tag = " · macro"
+                elseif point.walk then tag = " · walk" end
+                local subtitle = string.format("%.0f u · %s%s", item.distance, weapon_label(point.weapon), tag)
                 local cy = cur_y + math.floor(heights[i] / 2)
                 draw_world_label(sx, cy, point.name or "Lineup", subtitle,
                     item.alpha, item_r, item_g, item_b)
@@ -1209,9 +1697,9 @@ callbacks.Register("Draw", "helper12_draw", function()
         end
     end
 
-    if show_status:GetValue() then
+    if show_status:GetValue() and not rec_active and not rec_waiting then
         draw.Color(255, 255, 255, 255)
-        draw.Text(12, 12, "helper 1.2: " .. state)
+        draw.Text(12, 12, "helper 1.3: " .. state)
         if candidate then draw.Text(12, 28, "point: " .. (candidate.name or "Lineup"))
         elseif path_near then draw.Text(12, 28, "path: " .. (path_near.name or "Lineup")) end
         if path_phase ~= "none" then draw.Text(12, 44, "path: " .. path_phase) end

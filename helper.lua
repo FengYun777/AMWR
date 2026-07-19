@@ -1,49 +1,61 @@
 local DATA_FILE = "helper_data.txt"
 local DEFAULT_DATA = "return {\n}\n"
 
--- helper 1.1 (based on 1.0)
+-- helper 1.2
 -- lineups saved in helper_data.txt so they survive reloads
-local window = gui.Window("helper11_window", "helper 1.1", 120, 120, 612, 480)
+local MOVE_SCALE = 1
+local IN_ATTACK, IN_JUMP, IN_DUCK = 1, 2, 4
+local IN_FORWARD, IN_BACK = 8, 16
+local IN_MOVELEFT, IN_MOVERIGHT = 512, 1024
+local IN_ATTACK2 = 2048
+
+local window = gui.Window("helper12_window", "helper 1.2", 120, 80, 612, 680)
 local col_w = 288
 local gap = 24
 local left_x = 8
 local right_x = left_x + col_w + gap
 
-local playback_h = 188
+local playback_h = 315
 local visuals_h = 296
-local record_h = 220
+local record_h = 300
 local manage_h = 120
 
 local settings = gui.Groupbox(window, "Playback", left_x, 8, col_w, playback_h)
-local enabled = gui.Checkbox(settings, "helper11_enabled", "Enabled", true)
-local execute_key = gui.Keybox(settings, "helper11_execute_key", "Execute key (default LMB)", 1)
-local smooth = gui.Slider(settings, "helper11_smooth", "Aim smoothness", 8, 1, 50)
-local position_radius = gui.Slider(settings, "helper11_position_radius", "Spot radius", 8, 2, 20)
-local show_distance = gui.Slider(settings, "helper11_show_distance", "Show distance", 1200, 100, 5000)
+local enabled = gui.Checkbox(settings, "helper12_enabled", "Enabled", true)
+local execute_key = gui.Keybox(settings, "helper12_execute_key", "Execute key (default LMB)", 1)
+local smooth = gui.Slider(settings, "helper12_smooth", "Aim smoothness", 8, 1, 50)
+local position_radius = gui.Slider(settings, "helper12_position_radius", "Spot radius", 8, 2, 40)
+local show_distance = gui.Slider(settings, "helper12_show_distance", "Show distance", 1200, 100, 5000)
+local auto_path = gui.Checkbox(settings, "helper12_auto_path", "Auto walk to nearest spot", true)
+local path_range = gui.Slider(settings, "helper12_path_range", "Auto path range", 50, 50, 1500)
+local path_center = gui.Slider(settings, "helper12_path_center", "Path center", 0.1, 0.1, 4)
+local path_settle = gui.Slider(settings, "helper12_path_settle", "Path settle delay", 1.0, 0.1, 2.0)
 
 local visuals = gui.Groupbox(window, "Visuals", right_x, 8, col_w, visuals_h)
-local show_points = gui.Checkbox(visuals, "helper11_show_points", "Show world labels", true)
-local show_spot_ring = gui.Checkbox(visuals, "helper11_show_spot_ring", "Show spot ring", true)
-local show_fov = gui.Checkbox(visuals, "helper11_show_fov", "Show FOV ring", false)
-local show_status = gui.Checkbox(visuals, "helper11_show_status", "Show playback state", false)
-local bg_color = gui.ColorPicker(visuals, "helper11_bg", "Label background", 18, 20, 28, 195)
-local glow_color = gui.ColorPicker(visuals, "helper11_glow", "Label glow", 255, 120, 70, 200)
-local red = gui.ColorPicker(visuals, "helper11_red", "Aim dot (idle)", 245, 70, 70, 255)
-local green = gui.ColorPicker(visuals, "helper11_green", "Aim dot (ready/playing)", 80, 230, 120, 255)
+local show_points = gui.Checkbox(visuals, "helper12_show_points", "Show world labels", true)
+local show_spot_ring = gui.Checkbox(visuals, "helper12_show_spot_ring", "Show spot ring", true)
+local show_fov = gui.Checkbox(visuals, "helper12_show_fov", "Show FOV ring", false)
+local show_status = gui.Checkbox(visuals, "helper12_show_status", "Show playback state", false)
+local bg_color = gui.ColorPicker(visuals, "helper12_bg", "Label background", 18, 20, 28, 195)
+local glow_color = gui.ColorPicker(visuals, "helper12_glow", "Label glow", 255, 120, 70, 200)
+local red = gui.ColorPicker(visuals, "helper12_red", "Aim dot (idle)", 245, 70, 70, 255)
+local green = gui.ColorPicker(visuals, "helper12_green", "Aim dot (ready/playing)", 80, 230, 120, 255)
 
 local record_y = 8 + playback_h + gap
 local record_box = gui.Groupbox(window, "Record", left_x, record_y, col_w, record_h)
-local rec_name = gui.Editbox(record_box, "helper11_rec_name", "Spot name")
-local rec_jump = gui.Checkbox(record_box, "helper11_rec_jump", "Jump throw", false)
-local rec_crouch = gui.Checkbox(record_box, "helper11_rec_crouch", "Crouch", false)
-local rec_throw = gui.Combobox(record_box, "helper11_rec_throw", "Throw mode", "Left click", "Both buttons", "Right click")
-local rec_fov = gui.Slider(record_box, "helper11_rec_fov", "FOV range (deg)", 5, 1, 45)
+local rec_name = gui.Editbox(record_box, "helper12_rec_name", "Spot name")
+local rec_jump = gui.Checkbox(record_box, "helper12_rec_jump", "Jump throw", false)
+local rec_walk = gui.Checkbox(record_box, "helper12_rec_walk", "Walk throw", true)
+local rec_walk_ticks = gui.Slider(record_box, "helper12_rec_walk_ticks", "Walk ticks", 30, 1, 250)
+local rec_walk_dir = gui.Combobox(record_box, "helper12_rec_walk_dir", "Walk dir", "Forward", "Back", "Left", "Right")
+local rec_crouch = gui.Checkbox(record_box, "helper12_rec_crouch", "Crouch", false)
+local rec_throw = gui.Combobox(record_box, "helper12_rec_throw", "Throw mode", "Left click", "Both buttons", "Right click")
+local rec_fov = gui.Slider(record_box, "helper12_rec_fov", "FOV range (deg)", 5, 1, 45)
 
 local manage_y = 8 + visuals_h + gap
 local manage_box = gui.Groupbox(window, "Manage", right_x, manage_y, col_w, manage_h)
-local rec_save = gui.Checkbox(manage_box, "helper11_rec_save", "Save current spot", false)
-local del_save = gui.Checkbox(manage_box, "helper11_del_save", "Delete aimed spot", false)
-
+local rec_save = gui.Checkbox(manage_box, "helper12_rec_save", "Save current spot", false)
+local del_save = gui.Checkbox(manage_box, "helper12_del_save", "Delete aimed spot", false)
 local rec_save_prev = false
 local del_save_prev = false
 
@@ -134,12 +146,12 @@ local function load_lineups()
     end
     local chunk, err = load(raw)
     if chunk == nil then
-        print("[helper 1.1] failed to parse helper_data.txt: " .. tostring(err))
+        print("[helper 1.2] failed to parse helper_data.txt: " .. tostring(err))
         return {}
     end
     local success, data = pcall(chunk)
     if not success or type(data) ~= "table" then
-        print("[helper 1.1] helper_data.txt must return a table")
+        print("[helper 1.2] helper_data.txt must return a table")
         return {}
     end
     return data
@@ -157,6 +169,10 @@ local aim_yaw = 0
 local stable_ticks = 0
 local playback_tick = 0
 local await_key_release = false
+local path_phase = "none"
+local path_settle_ticks = 0
+local path_stuck_ticks = 0
+local path_last_nd = 1e9
 
 local function valid_point(point)
     if type(point) ~= "table" then return false end
@@ -197,6 +213,9 @@ local function build_point_entry(ctx, name)
         ", yaw=" .. string.format("%.2f", ctx.ang.yaw) .. "},\n" ..
         "            jump   = " .. tostring(rec_jump:GetValue()) .. ",\n" ..
         "            crouch = " .. tostring(rec_crouch:GetValue()) .. ",\n" ..
+        "            walk   = " .. tostring(rec_walk:GetValue()) .. ",\n" ..
+        "            walk_ticks = " .. tostring(math.floor(rec_walk_ticks:GetValue())) .. ",\n" ..
+        "            walk_dir = " .. tostring(rec_walk_dir:GetValue()) .. ",\n" ..
         "            throw_mode = " .. tostring(rec_throw:GetValue()) .. ",\n" ..
         "            weapon = \"" .. escape_lua_string(ctx.weapon) .. "\",\n" ..
         "            range  = " .. tostring(math.floor(rec_fov:GetValue())) .. ",\n" ..
@@ -235,7 +254,6 @@ local function find_entry_bounds(text, point)
         local line_end = text:find("\n", pos_x, true) or #text
         local line_str = text:sub(pos_x, line_end)
         if line_str:find("y=" .. py_str, 1, true) then
-            -- same floor pos can host multiple throws; match ang too
             local ang_pos = text:find("ang    = {pitch=", pos_x, true)
             if ang_pos and ang_pos < pos_x + 180 then
                 local ang_end = text:find("}", ang_pos, true) or ang_pos
@@ -304,6 +322,19 @@ local function point_key(point)
     return string.format("%d,%d,%d", math.floor(point.pos.x + 0.5), math.floor(point.pos.y + 0.5), math.floor(point.pos.z + 0.5))
 end
 
+local function same_spot_pos(a, b)
+    if not a or not b or not a.pos or not b.pos then return false end
+    if distance_xy(a.pos, b.pos) > 2.5 then return false end
+    return math.abs(a.pos.z - b.pos.z) <= 10
+end
+
+local function group_key(point)
+    return string.format("%d,%d,%d",
+        math.floor(point.pos.x / 2 + 0.5) * 2,
+        math.floor(point.pos.y / 2 + 0.5) * 2,
+        math.floor(point.pos.z / 8 + 0.5) * 8)
+end
+
 local function point_label_key(point)
     return point_key(point) .. "|" .. tostring(point.ang.pitch) .. "|" .. tostring(point.ang.yaw)
 end
@@ -351,23 +382,41 @@ local function find_candidate(player, map, weapon, view)
     return best
 end
 
+local function find_nearest(player, map, weapon, max_dist)
+    local points = lineups[map]
+    if type(points) ~= "table" then return nil, 1e9 end
+    local origin = player:GetAbsOrigin()
+    local best, best_d = nil, max_dist or 1e9
+    for _, point in ipairs(points) do
+        if valid_point(point) and weapon_matches(point.weapon, weapon) then
+            local target = point_position(point)
+            local d = distance_xy(origin, target)
+            if d < best_d then
+                best = point
+                best_d = d
+            end
+        end
+    end
+    return best, best_d
+end
+
 local function clear_controlled_buttons(buttons)
-    buttons = bit.band(buttons, bit.bnot(1))
-    buttons = bit.band(buttons, bit.bnot(2048))
-    buttons = bit.band(buttons, bit.bnot(2))
-    buttons = bit.band(buttons, bit.bnot(4))
-    buttons = bit.band(buttons, bit.bnot(8))
-    buttons = bit.band(buttons, bit.bnot(16))
-    buttons = bit.band(buttons, bit.bnot(512))
-    buttons = bit.band(buttons, bit.bnot(1024))
+    buttons = bit.band(buttons, bit.bnot(IN_ATTACK))
+    buttons = bit.band(buttons, bit.bnot(IN_ATTACK2))
+    buttons = bit.band(buttons, bit.bnot(IN_JUMP))
+    buttons = bit.band(buttons, bit.bnot(IN_DUCK))
+    buttons = bit.band(buttons, bit.bnot(IN_FORWARD))
+    buttons = bit.band(buttons, bit.bnot(IN_BACK))
+    buttons = bit.band(buttons, bit.bnot(IN_MOVELEFT))
+    buttons = bit.band(buttons, bit.bnot(IN_MOVERIGHT))
     return buttons
 end
 
 local function throw_buttons(point, base)
     local mode = point.throw_mode or 0
-    if mode == 0 then base = bit.bor(base, 1) end
-    if mode == 1 then base = bit.bor(base, bit.bor(1, 2048)) end
-    if mode == 2 then base = bit.bor(base, 2048) end
+    if mode == 0 then base = bit.bor(base, IN_ATTACK) end
+    if mode == 1 then base = bit.bor(base, bit.bor(IN_ATTACK, IN_ATTACK2)) end
+    if mode == 2 then base = bit.bor(base, IN_ATTACK2) end
     return base
 end
 
@@ -411,7 +460,35 @@ local function write_charge(cmd, point)
     cmd:SetSideMove(0)
     cmd:SetUpMove(0)
     local buttons = throw_buttons(point, clear_controlled_buttons(math.floor(cmd:GetButtons())))
-    if point.crouch then buttons = bit.bor(buttons, 4) end
+    if point.crouch then buttons = bit.bor(buttons, IN_DUCK) end
+    cmd:SetButtons(buttons)
+end
+
+local function write_walk(cmd, point)
+    aim_pitch = point.ang.pitch
+    aim_yaw = normalize_yaw(point.ang.yaw)
+    aim_pitch, aim_yaw = apply_view(cmd, aim_pitch, aim_yaw)
+    local dir = tonumber(point.walk_dir) or 0
+    local spd = MOVE_SCALE
+    local fwd, side = 0, 0
+    local buttons = throw_buttons(point, clear_controlled_buttons(math.floor(cmd:GetButtons())))
+    if dir == 0 then
+        fwd = spd
+        buttons = bit.bor(buttons, IN_FORWARD)
+    elseif dir == 1 then
+        fwd = -spd
+        buttons = bit.bor(buttons, IN_BACK)
+    elseif dir == 2 then
+        side = spd
+        buttons = bit.bor(buttons, IN_MOVELEFT)
+    else
+        side = -spd
+        buttons = bit.bor(buttons, IN_MOVERIGHT)
+    end
+    cmd:SetForwardMove(fwd)
+    cmd:SetSideMove(side)
+    cmd:SetUpMove(0)
+    if point.crouch then buttons = bit.bor(buttons, IN_DUCK) end
     cmd:SetButtons(buttons)
 end
 
@@ -421,15 +498,46 @@ local function write_release(cmd, point, jumping)
     cmd:SetSideMove(0)
     cmd:SetUpMove(0)
     local buttons = clear_controlled_buttons(math.floor(cmd:GetButtons()))
-    if point.crouch and not jumping then buttons = bit.bor(buttons, 4) end
-    if jumping then buttons = bit.bor(buttons, 2) end
+    if point.crouch and not jumping then buttons = bit.bor(buttons, IN_DUCK) end
+    if jumping then buttons = bit.bor(buttons, IN_JUMP) end
     cmd:SetButtons(buttons)
+end
+
+local function write_approach(cmd, player, point, snap)
+    local origin = player:GetAbsOrigin()
+    local dx = point.pos.x - origin.x
+    local dy = point.pos.y - origin.y
+    local dist = math.sqrt(dx * dx + dy * dy)
+    snap = tonumber(snap) or 0.5
+    if dist <= snap then
+        cmd:SetForwardMove(0)
+        cmd:SetSideMove(0)
+        cmd:SetUpMove(0)
+        local buttons = clear_controlled_buttons(math.floor(cmd:GetButtons()))
+        cmd:SetButtons(buttons)
+        return true
+    end
+    local view = engine.GetViewAngles()
+    local wish = math.deg(math.atan2(dy, dx))
+    local yd = normalize_yaw(wish - view.yaw) * math.pi / 180
+    local scale = 1
+    if dist < 8 then
+        scale = math.max(0.15, dist / 8)
+    end
+    cmd:SetForwardMove(math.cos(yd) * scale)
+    cmd:SetSideMove(math.sin(yd) * scale)
+    cmd:SetUpMove(0)
+    local buttons = clear_controlled_buttons(math.floor(cmd:GetButtons()))
+    buttons = bit.bor(buttons, IN_FORWARD)
+    cmd:SetButtons(buttons)
+    return false
 end
 
 local function write_current_command(cmd)
     if active == nil then return end
     if state == "aim" then write_aim(cmd) end
     if state == "charge" then write_charge(cmd, active) end
+    if state == "walk" then write_walk(cmd, active) end
     if state == "release" then write_release(cmd, active, false) end
     if state == "jump" then write_release(cmd, active, true) end
 end
@@ -451,6 +559,10 @@ local function update_playback(cmd, player, map, weapon)
         reset_playback()
         candidate = nil
         await_key_release = false
+        path_phase = "none"
+        path_settle_ticks = 0
+        path_stuck_ticks = 0
+        path_last_nd = 1e9
         label_alphas = {}
     end
 
@@ -461,7 +573,96 @@ local function update_playback(cmd, player, map, weapon)
 
     candidate = find_candidate(player, map, weapon, engine.GetViewAngles())
     if state == "idle" then
-        if candidate and is_execute_down() then start_aim(cmd, candidate) end
+        local settle_need = 8
+        pcall(function()
+            local ti = globals.TickInterval and globals.TickInterval() or (1 / 64)
+            if type(ti) ~= "number" or ti <= 0 then ti = 1 / 64 end
+            settle_need = math.max(1, math.floor(path_settle:GetValue() / ti + 0.5))
+        end)
+        local rad = position_radius:GetValue()
+
+        if candidate and is_execute_down() then
+            path_phase = "none"
+            path_settle_ticks = 0
+            path_stuck_ticks = 0
+            start_aim(cmd, candidate)
+            return
+        end
+
+        if auto_path:GetValue() and is_execute_down() then
+            local snap = path_center:GetValue()
+            local leave = math.max(snap + 3, rad + 2)
+            local near, nd = find_nearest(player, map, weapon, path_range:GetValue())
+
+            if not near then
+                path_phase = "none"
+                path_settle_ticks = 0
+                path_stuck_ticks = 0
+            elseif path_phase == "ready" then
+                if nd > leave then
+                    path_phase = "walk"
+                    path_settle_ticks = 0
+                    path_stuck_ticks = 0
+                    path_last_nd = nd
+                end
+            elseif path_phase == "settle" then
+                if nd > leave then
+                    path_phase = "walk"
+                    path_settle_ticks = 0
+                    path_stuck_ticks = 0
+                    path_last_nd = nd
+                else
+                    path_settle_ticks = path_settle_ticks + 1
+                    cmd:SetForwardMove(0)
+                    cmd:SetSideMove(0)
+                    cmd:SetUpMove(0)
+                    local buttons = clear_controlled_buttons(math.floor(cmd:GetButtons()))
+                    cmd:SetButtons(buttons)
+                    if path_settle_ticks < settle_need then
+                        return
+                    end
+                    path_phase = "ready"
+                    path_settle_ticks = 0
+                    return
+                end
+            else
+                local close_enough = nd <= snap
+                if path_phase == "walk" then
+                    if nd < path_last_nd - 0.15 then
+                        path_stuck_ticks = 0
+                        path_last_nd = nd
+                    else
+                        path_stuck_ticks = path_stuck_ticks + 1
+                    end
+                    if nd <= rad and path_stuck_ticks > 24 then
+                        close_enough = true
+                    end
+                end
+
+                if not close_enough and nd > snap then
+                    path_phase = "walk"
+                    if path_last_nd > nd + 50 then path_last_nd = nd end
+                    write_approach(cmd, player, near, snap)
+                    return
+                elseif path_phase == "walk" and close_enough then
+                    path_phase = "settle"
+                    path_settle_ticks = 0
+                    path_stuck_ticks = 0
+                    cmd:SetForwardMove(0)
+                    cmd:SetSideMove(0)
+                    cmd:SetUpMove(0)
+                    local buttons = clear_controlled_buttons(math.floor(cmd:GetButtons()))
+                    cmd:SetButtons(buttons)
+                    return
+                elseif nd <= snap and path_phase ~= "walk" then
+                    path_phase = "none"
+                end
+            end
+        else
+            path_phase = "none"
+            path_settle_ticks = 0
+            path_stuck_ticks = 0
+        end
         return
     end
 
@@ -471,12 +672,6 @@ local function update_playback(cmd, player, map, weapon)
     end
 
     if state == "aim" then
-        local view = engine.GetViewAngles()
-        if not is_view_in_point_fov(view, active) then
-            reset_playback()
-            return
-        end
-
         local target_pitch = math.max(-89, math.min(89, active.ang.pitch))
         local target_yaw = normalize_yaw(active.ang.yaw)
         local pitch_delta = target_pitch - aim_pitch
@@ -521,7 +716,22 @@ local function update_playback(cmd, player, map, weapon)
 
     if state == "charge" then
         playback_tick = playback_tick + 1
-        if playback_tick > charge_ticks_for(active) then state = "release"; playback_tick = 0 end
+        if playback_tick > charge_ticks_for(active) then
+            playback_tick = 0
+            if active.walk then
+                state = "walk"
+            else
+                state = "release"
+            end
+        end
+    elseif state == "walk" then
+        playback_tick = playback_tick + 1
+        local need = tonumber(active.walk_ticks) or 30
+        if active.crouch then need = need * 3 end
+        if playback_tick >= need then
+            playback_tick = 0
+            state = "release"
+        end
     elseif state == "release" then
         playback_tick = playback_tick + 1
         if playback_tick > 1 then
@@ -534,22 +744,48 @@ local function update_playback(cmd, player, map, weapon)
     end
 end
 
-callbacks.Register("CreateMove", "helper11_createmove", function(cmd)
+local function is_lmb_execute()
+    local k = 0
+    pcall(function() k = execute_key:GetValue() or 0 end)
+    return k == 1
+end
+
+local function block_early_pin(cmd)
+    if not enabled:GetValue() then return end
+    if not is_lmb_execute() then return end
+    if not is_execute_down() then return end
+    if state == "charge" or state == "walk" or state == "release" or state == "jump" then
+        return
+    end
+    local buttons = math.floor(cmd:GetButtons())
+    buttons = bit.band(buttons, bit.bnot(IN_ATTACK))
+    buttons = bit.band(buttons, bit.bnot(IN_ATTACK2))
+    cmd:SetButtons(buttons)
+end
+
+callbacks.Register("CreateMove", "helper12_createmove", function(cmd)
     if not enabled:GetValue() then reset_playback(); return end
     local player = get_player()
     if player == nil then reset_playback(); return end
     local weapon = get_grenade(player)
     if weapon == nil then reset_playback(); return end
+    block_early_pin(cmd)
     update_playback(cmd, player, map_name(), weapon)
     write_current_command(cmd)
+    block_early_pin(cmd)
 end)
 
-callbacks.Register("PreMove", "helper11_premove", function(cmd)
-    if enabled:GetValue() and active and is_execute_down() then write_current_command(cmd) end
+callbacks.Register("PreMove", "helper12_premove", function(cmd)
+    if not enabled:GetValue() then return end
+    block_early_pin(cmd)
+    if active and is_execute_down() then write_current_command(cmd) end
+    block_early_pin(cmd)
 end)
 
-callbacks.Register("PostMove", "helper11_postmove", function(cmd)
-    if enabled:GetValue() and active and is_execute_down() then write_current_command(cmd) end
+callbacks.Register("PostMove", "helper12_postmove", function(cmd)
+    if not enabled:GetValue() then return end
+    if active and is_execute_down() then write_current_command(cmd) end
+    block_early_pin(cmd)
 end)
 
 local function draw_ring(point, radius, r, g, b, a)
@@ -708,7 +944,7 @@ end
 local function save_current_spot()
     local ctx = get_record_context()
     if ctx == nil then
-        print("[helper 1.1] record failed: hold a grenade before saving")
+        print("[helper 1.2] record failed: hold a grenade before saving")
         return
     end
     local name = rec_name:GetString()
@@ -719,7 +955,10 @@ local function save_current_spot()
     reload_lineups()
     rec_save:SetValue(false)
     rec_save_prev = false
-    print(string.format("[helper 1.1] saved spot \"%s\" on %s", name, ctx.map))
+    print(string.format("[helper 1.2] saved spot \"%s\" on %s", name, ctx.map))
+    if rec_walk:GetValue() then
+        print(string.format("[helper 1.2] walk throw: ticks=%d dir=%d", math.floor(rec_walk_ticks:GetValue()), rec_walk_dir:GetValue()))
+    end
 end
 
 local function delete_nearest_spot()
@@ -727,13 +966,13 @@ local function delete_nearest_spot()
     if player == nil then return end
     local weapon = get_grenade(player)
     if weapon == nil then
-        print("[helper 1.1] delete failed: hold a matching grenade first")
+        print("[helper 1.2] delete failed: hold a matching grenade first")
         return
     end
     local map = map_name()
     local list = lineups[map]
     if type(list) ~= "table" or #list == 0 then
-        print("[helper 1.1] delete failed: no spots on this map")
+        print("[helper 1.2] delete failed: no spots on this map")
         return
     end
     local origin = player:GetAbsOrigin()
@@ -758,13 +997,13 @@ local function delete_nearest_spot()
         end
     end
     if target == nil then
-        print("[helper 1.1] delete failed: stand within 8u and aim at spot (green)")
+        print("[helper 1.2] delete failed: stand within 8u and aim at spot (green)")
         return
     end
     local text = read_data_file()
     local entry_start, entry_end = find_entry_bounds(text, target)
     if entry_start == nil or entry_end == nil then
-        print("[helper 1.1] delete failed: could not locate spot in file")
+        print("[helper 1.2] delete failed: could not locate spot in file")
         return
     end
     write_data_file(text:sub(1, entry_start - 1) .. text:sub(entry_end))
@@ -772,7 +1011,7 @@ local function delete_nearest_spot()
     reload_lineups()
     del_save:SetValue(false)
     del_save_prev = false
-    print(string.format("[helper 1.1] deleted spot \"%s\" (%.1fu)", target.name or "Lineup", target_d))
+    print(string.format("[helper 1.2] deleted spot \"%s\" (%.1fu)", target.name or "Lineup", target_d))
 end
 
 local function handle_record_toggle()
@@ -787,7 +1026,7 @@ local function handle_delete_toggle()
     del_save_prev = cur
 end
 
-callbacks.Register("Draw", "helper11_draw", function()
+callbacks.Register("Draw", "helper12_draw", function()
     window:SetActive(gui.Reference("Menu"):IsActive())
     handle_record_toggle()
     handle_delete_toggle()
@@ -810,22 +1049,32 @@ callbacks.Register("Draw", "helper11_draw", function()
     local radius = position_radius:GetValue()
     local ft = frame_time()
 
+    local path_near = nil
+    if auto_path:GetValue() then
+        local near, nd = find_nearest(player, map, weapon, path_range:GetValue())
+        if near and nd <= path_range:GetValue() then
+            path_near = near
+        end
+    end
+
     local draw_list = {}
     for _, point in ipairs(points) do
         if valid_point(point) and weapon_matches(point.weapon, weapon) then
             local distance = distance_xy(origin, point_position(point))
-            if distance <= fade_end + 50 then
+            local is_path = path_near ~= nil and same_spot_pos(point, path_near)
+            if distance <= fade_end + 50 or is_path then
                 local on_spot = distance <= radius and math.abs(origin.z - point.pos.z) <= 12
                 local alpha = 255
-                if not on_spot then
+                if not on_spot and not is_path then
                     alpha = update_label_alpha(point_label_key(point), distance, fade_start, fade_end, ft)
                 end
-                if alpha >= 4 or on_spot then
+                if alpha >= 4 or on_spot or is_path then
                     table.insert(draw_list, {
                         point = point,
                         distance = distance,
-                        alpha = on_spot and math.max(alpha, 220) or alpha,
+                        alpha = (on_spot or is_path) and math.max(alpha, 220) or alpha,
                         on_spot = on_spot,
+                        is_path = is_path,
                         is_active = active == point,
                     })
                 end
@@ -833,19 +1082,18 @@ callbacks.Register("Draw", "helper11_draw", function()
         end
     end
 
-    -- standing on a spot -> only draw this spot
-    local standing_key = nil
+    local standing_pt = nil
     local standing_best = math.huge
     for _, item in ipairs(draw_list) do
         if item.on_spot and item.distance < standing_best then
             standing_best = item.distance
-            standing_key = point_key(item.point)
+            standing_pt = item.point
         end
     end
-    if standing_key then
+    if standing_pt then
         local filtered = {}
         for _, item in ipairs(draw_list) do
-            if point_key(item.point) == standing_key then
+            if same_spot_pos(item.point, standing_pt) or item.is_path then
                 table.insert(filtered, item)
             end
         end
@@ -854,7 +1102,7 @@ callbacks.Register("Draw", "helper11_draw", function()
 
     local stack_groups = {}
     for _, item in ipairs(draw_list) do
-        local pk = point_key(item.point)
+        local pk = group_key(item.point)
         if not stack_groups[pk] then stack_groups[pk] = {} end
         table.insert(stack_groups[pk], item)
     end
@@ -867,30 +1115,54 @@ callbacks.Register("Draw", "helper11_draw", function()
 
         local accent_r, accent_g, accent_b = rr, rg, rb
         for _, item in ipairs(items) do
-            if item.is_active then accent_r, accent_g, accent_b = gr, gg, gb; break end
+            if item.is_active or item.is_path then accent_r, accent_g, accent_b = gr, gg, gb; break end
         end
 
         local any_on_spot = false
+        local any_path = false
         for _, item in ipairs(items) do
-            if item.on_spot then any_on_spot = true; break end
+            if item.on_spot then any_on_spot = true end
+            if item.is_path then any_path = true end
         end
 
-        if show_spot_ring:GetValue() and any_on_spot then
+        if show_spot_ring:GetValue() and (any_on_spot or any_path) then
             local ring_alpha = 255
             for _, item in ipairs(items) do
-                if item.on_spot then ring_alpha = math.max(ring_alpha, item.alpha) end
+                if item.on_spot or item.is_path then ring_alpha = math.max(ring_alpha, item.alpha) end
             end
             draw_ring(point0, radius, accent_r, accent_g, accent_b, math.floor(170 * ring_alpha / 255))
         end
 
-        for _, item in ipairs(items) do
-            if item.on_spot then
-                local point = item.point
-                local spot_alpha = math.max(item.alpha, 220)
+        if any_on_spot or any_path then
+            local aim_item = nil
+            local best_ang = math.huge
+            for _, item in ipairs(items) do
+                if item.on_spot or item.is_path then
+                    if item.is_active then
+                        aim_item = item
+                        break
+                    end
+                    local in_fov = is_view_in_point_fov(view, item.point)
+                    if in_fov then
+                        local dp, dy = angle_delta_to_point(view, item.point)
+                        local ad = math.abs(dp) + math.abs(dy)
+                        if ad < best_ang then
+                            best_ang = ad
+                            aim_item = item
+                        end
+                    elseif aim_item == nil then
+                        aim_item = item
+                    end
+                end
+            end
+            if aim_item then
+                local point = aim_item.point
+                local spot_alpha = math.max(aim_item.alpha, 220)
                 local in_fov = is_view_in_point_fov(view, point)
-                draw_fov_ring(point, in_fov, spot_alpha)
-                local playing = item.is_active and is_execute_down() and state ~= "aim"
-                draw_aim_target(player, point, playing, in_fov, spot_alpha, view)
+                local ready = in_fov or aim_item.is_path
+                draw_fov_ring(point, ready, spot_alpha)
+                local playing = aim_item.is_active and is_execute_down() and state ~= "aim"
+                draw_aim_target(player, point, playing, ready, spot_alpha, view)
             end
         end
 
@@ -898,7 +1170,7 @@ callbacks.Register("Draw", "helper11_draw", function()
         if sx and sy and show_points:GetValue() then
             local heights, total_h = {}, 0
             for i, item in ipairs(items) do
-                local subtitle = string.format("%.0f u · %s", item.distance, weapon_label(item.point.weapon))
+                local subtitle = string.format("%.0f u · %s%s", item.distance, weapon_label(item.point.weapon), item.point.walk and " · walk" or "")
                 local _, h = measure_label(item.point.name or "Lineup", subtitle)
                 heights[i] = h
                 total_h = total_h + h + (i < #items and 5 or 0)
@@ -908,8 +1180,8 @@ callbacks.Register("Draw", "helper11_draw", function()
             for i, item in ipairs(items) do
                 local point = item.point
                 local item_r, item_g, item_b = rr, rg, rb
-                if item.is_active then item_r, item_g, item_b = gr, gg, gb end
-                local subtitle = string.format("%.0f u · %s", item.distance, weapon_label(point.weapon))
+                if item.is_active or item.is_path then item_r, item_g, item_b = gr, gg, gb end
+                local subtitle = string.format("%.0f u · %s%s", item.distance, weapon_label(point.weapon), point.walk and " · walk" or "")
                 local cy = cur_y + math.floor(heights[i] / 2)
                 draw_world_label(sx, cy, point.name or "Lineup", subtitle,
                     item.alpha, item_r, item_g, item_b)
@@ -920,7 +1192,9 @@ callbacks.Register("Draw", "helper11_draw", function()
 
     if show_status:GetValue() then
         draw.Color(255, 255, 255, 255)
-        draw.Text(12, 12, "helper 1.1: " .. state)
-        if candidate then draw.Text(12, 28, "point: " .. (candidate.name or "Lineup")) end
+        draw.Text(12, 12, "helper 1.2: " .. state)
+        if candidate then draw.Text(12, 28, "point: " .. (candidate.name or "Lineup"))
+        elseif path_near then draw.Text(12, 28, "path: " .. (path_near.name or "Lineup")) end
+        if path_phase ~= "none" then draw.Text(12, 44, "path: " .. path_phase) end
     end
 end)

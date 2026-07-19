@@ -750,13 +750,27 @@ local function is_lmb_execute()
     return k == 1
 end
 
+local function should_block_early_pin(player, weapon)
+    if state == "aim" then return true end
+    if candidate then return true end
+    if path_phase ~= "none" then return true end
+    if not auto_path:GetValue() then return false end
+    local near, nd = find_nearest(player, map_name(), weapon, path_range:GetValue())
+    return near ~= nil and nd <= path_range:GetValue()
+end
+
 local function block_early_pin(cmd)
     if not enabled:GetValue() then return end
     if not is_lmb_execute() then return end
     if not is_execute_down() then return end
+    local player = get_player()
+    if player == nil then return end
+    local weapon = get_grenade(player)
+    if weapon == nil then return end
     if state == "charge" or state == "walk" or state == "release" or state == "jump" then
         return
     end
+    if not should_block_early_pin(player, weapon) then return end
     local buttons = math.floor(cmd:GetButtons())
     buttons = bit.band(buttons, bit.bnot(IN_ATTACK))
     buttons = bit.band(buttons, bit.bnot(IN_ATTACK2))
@@ -768,7 +782,10 @@ callbacks.Register("CreateMove", "helper12_createmove", function(cmd)
     local player = get_player()
     if player == nil then reset_playback(); return end
     local weapon = get_grenade(player)
-    if weapon == nil then reset_playback(); return end
+    if weapon == nil then
+        reset_playback()
+        return
+    end
     block_early_pin(cmd)
     update_playback(cmd, player, map_name(), weapon)
     write_current_command(cmd)
@@ -777,6 +794,8 @@ end)
 
 callbacks.Register("PreMove", "helper12_premove", function(cmd)
     if not enabled:GetValue() then return end
+    local player = get_player()
+    if player == nil or get_grenade(player) == nil then return end
     block_early_pin(cmd)
     if active and is_execute_down() then write_current_command(cmd) end
     block_early_pin(cmd)
@@ -784,6 +803,8 @@ end)
 
 callbacks.Register("PostMove", "helper12_postmove", function(cmd)
     if not enabled:GetValue() then return end
+    local player = get_player()
+    if player == nil or get_grenade(player) == nil then return end
     if active and is_execute_down() then write_current_command(cmd) end
     block_early_pin(cmd)
 end)
